@@ -1,9 +1,0 @@
-{
-  "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3MmEzNWFiZS0zOGU3LTQ5ZGMtYTU1YS01NThkY2UwOGIzOWEiLCJpc3MiOiJGcmllbmRXb3JrLkFwaS5OZXRDb3JlIiwiYXVkIjoiaHR0cDovL2xvY2FsaG9zdDo1MDAwIiwibmFtZWlkIjoidGVzdEBmcmllbmR3b3JrLnJ1IiwiYSI6IjIyMDE0IiwiYiI6IjEwMDAwMDIiLCJkIjoiRmFsc2UiLCJjIjoiVHJ1ZSIsIm5iZiI6MTc3MjgwOTM1NiwiZXhwIjoxNzgwODQ0NTU2LCJpYXQiOjE3NzI4MDkzNTZ9.Hm750iklnIdcnHPrYfbZ816bmZ1ggxSukhvvTWSnm2I",
-  "refreshToken": "728742a5-8a82-4552-8960-706b635dfb4d",
-  "returnUrl": "/Candidate/Index",
-  "isAuthenticated": true,
-  "isSsoDisabled": false,
-  "error": null,
-  "redirectLink": null
-}

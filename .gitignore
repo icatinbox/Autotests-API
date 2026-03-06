@@ -1,4 +1,6 @@
-.venv
-.idea
+.venv/
+.idea/
 data.py
-allure-results
+allure-results/
+__pycache__/
+*.pyc
