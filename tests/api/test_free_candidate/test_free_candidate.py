@@ -2,7 +2,7 @@ import copy
 import allure
 import pytest
 
-from data import BASE_PAYLOAD_CANDIDATE_HISTORIES, STATUS_FREE_CANDIDATE, STATUS_BLACK_LIST
+from data_structures import BASE_PAYLOAD_CANDIDATE_HISTORIES, STATUS_FREE_CANDIDATE, STATUS_BLACK_LIST
 from tests.schemas.candidate_scheme import FeedResponse, CandidateHistory
 
 @allure.feature('Назначение свободного кандидата')

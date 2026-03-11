@@ -1,7 +1,7 @@
 import copy
 import pytest
 import allure
-from data import BASE_PAYLOAD_TEST, BASE_PAYLOAD_CANDIDATE_HISTORIES
+from data_structures import BASE_PAYLOAD_TEST, BASE_PAYLOAD_CANDIDATE_HISTORIES
 from tests.schemas.assignment_test_scheme import DirectoryTest, DirectoryGrade, TestAssignment
 from pydantic import TypeAdapter
 from datetime import datetime, timedelta

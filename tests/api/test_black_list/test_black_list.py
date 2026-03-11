@@ -3,7 +3,7 @@ import copy
 import allure
 import pytest
 
-from data import PAYLOAD_BLACK_LIST, STATUS_BLACK_LIST, BASE_PAYLOAD_CANDIDATE_HISTORIES, STATUS_FREE_CANDIDATE
+from data_structures import PAYLOAD_BLACK_LIST, STATUS_BLACK_LIST, BASE_PAYLOAD_CANDIDATE_HISTORIES, STATUS_FREE_CANDIDATE
 from tests.schemas.candidate_scheme import FeedResponse, CandidateHistory
 
 @allure.feature('Назначение черного списка')

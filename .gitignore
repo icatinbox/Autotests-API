@@ -1,6 +1,6 @@
 .venv/
 .idea/
-data.py
+data_structures.py
 allure-results/
 __pycache__/
 *.pyc
