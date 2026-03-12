@@ -1,7 +1,11 @@
 import json
+import time
 from json import JSONDecodeError
 import allure
 import requests
+
+from core.http.retry import RetryConfig, should_retry
+
 
 def _attach_json(name: str, data):
     allure.attach(
@@ -19,10 +23,13 @@ class ClientApi:
         self.session = requests.Session()
         self.session.verify = verify
         self.session.headers.update({'accept': 'application/json'})
+        self.retry_config = RetryConfig()
 
-    def request(self, path, method, **kwargs):
+    def _request_once(self, path, method, attempt, **kwargs):
+        url = f"{self.base_url}/{path.lstrip('/')}"
+
         # Сохраняем данные запроса в allure
-        with allure.step(f'request {method.upper()} {path}'):
+        with allure.step(f'request {method.upper()} {path} | attempt {attempt}'):
             if "headers" in kwargs and kwargs["headers"]:
                 _attach_json("request.headers", dict(kwargs["headers"]))
             if "params" in kwargs and kwargs["params"]:
@@ -32,7 +39,7 @@ class ClientApi:
             if "data" in kwargs and kwargs["data"]:
                 _attach_text("request.data", str(kwargs["data"]))
 
-        url = f"{self.base_url}/{path.lstrip('/')}"
+        # Делаем запрос
         response = self.session.request(method, url, **kwargs)
 
         # Сохраняем данные ответа в allure
@@ -40,9 +47,8 @@ class ClientApi:
         _attach_json("response.headers", dict(response.headers))
         _attach_text("response.time_request", str(response.elapsed.total_seconds()))
 
-        content_type = response.headers.get('content-type').lower() if response.headers.get('content-type') else []
-
-            # Сохраняем json в allure, если content-type = application/json
+        content_type = (response.headers.get("content-type") or "").lower()
+        # Сохраняем json в allure, если content-type = application/json
         if "application/json" in content_type:
             try:
                 _attach_json("response.json", response.json())
@@ -52,6 +58,45 @@ class ClientApi:
             _attach_text("response.body", response.text)
 
         return response
+
+    def request(self, path, method, **kwargs):
+        config = self.retry_config
+        delay = config.delay
+        last_exception = None
+        last_response = None
+
+        # kwargs.setdefault("timeout", 10)
+        for attempt in range(1, config.attempts + 1):
+            try:
+                response = self._request_once(path, method, attempt, **kwargs)
+                last_response = response
+
+                if not should_retry(config=config, method=method, response=response):
+                    return response
+
+                if attempt < config.attempts:
+                    with allure.step(f'retry {attempt} / response.status {response.status_code}'):
+                        time.sleep(delay)
+                    delay *= config.backoff
+                    continue
+                return response
+
+            except Exception as e:
+                last_exception = e
+
+                with allure.step(f'retry {attempt} / {type(e).__name__}'):
+                    _attach_text("exception", str(e))
+                if not should_retry(config=config, method=method, response=last_response) or attempt == config.attempts:
+                    raise
+
+                with allure.step(f'"Retry after exception. Sleep {delay} sec"'):
+                    time.sleep(delay)
+                delay *= config.backoff
+
+        if last_exception:
+            raise last_exception
+        return last_response
+
 
     def request_json(self, path, method, is_raise=True, **kwargs):
         response = self.request(path, method, **kwargs)

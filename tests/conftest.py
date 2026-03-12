@@ -1,35 +1,28 @@
 import copy
-import random
-
 import pytest
-
+from dotenv import load_dotenv
+import os
 from data_structures import (BASE_PAYLOAD_CANDIDATE, BASE_PAYLOAD_VACANCY, BASE_PAYLOAD_CANDIDATE_HISTORIES,
-                             DEFAULT_STATUS_ID, BASE_PAYLOAD_TEST, PAYLOAD_ROLE_ADMIN,
-                             PAYLOAD_BASE_ROLE, STATUS_FREE_CANDIDATE, PAYLOAD_BLACK_LIST, LOGIN, PASSWORD, BASEURL)
+                             DEFAULT_STATUS_ID)
 from src.api.api_candidate import CandidateApi
 from src.api.api_client import ClientApi
 from src.api.api_settings import SettingsApi
 from src.api.api_tests import TestApi
 from src.api.api_vacancy import VacancyApi
 
-def pytest_addoption(parser):
-    parser.addoption(
-        "--url",
-        action = "store",
-        default = BASEURL,
-        help = "base url"
-    )
-
 @pytest.fixture
 def api_client(request):
-    base_url = request.config.getoption("--url")
+    load_dotenv()
+    base_url = os.getenv("API_BASE_URL")
     return ClientApi(base_url, verify=False)
 
 @pytest.fixture
 def auth_api_client(api_client):
+    login = os.getenv("LOGIN")
+    password = os.getenv("PASSWORD")
     payload = {
-        "username": LOGIN,
-        "password": PASSWORD
+        "username": login,
+        "password": password
     }
     api_client.request_auth(payload=payload)
     return api_client
@@ -85,18 +78,7 @@ def new_job(vacancy_api_auth):
     yield v['jobId']
     vacancy_api_auth.delete_vacancy(v['jobId'])
 
-@pytest.fixture
-def free_candidate(candidate_api_auth, candidate_job_histories):
-    candidate_id, job_id, candidate_history_id = candidate_job_histories
-    payload = {
-        **copy.deepcopy(BASE_PAYLOAD_CANDIDATE_HISTORIES),
-        'jobId': job_id,
-        "candidateId": candidate_id,
-        "accountId": 22014,
-        "statusId": STATUS_FREE_CANDIDATE,
-    }
-    _, data = candidate_api_auth.set_free_candidate(json=payload)
-    return candidate_id
+
 
 @pytest.fixture
 def new_candidate(candidate_api_auth):
@@ -104,12 +86,3 @@ def new_candidate(candidate_api_auth):
     yield c['candidateId']
     candidate_api_auth.delete_candidate(c['candidateId'])
 
-@pytest.fixture
-def black_list_candidate(candidate_api_auth, candidate_job_histories):
-    candidate_id, job_id, candidate_history_id = candidate_job_histories
-    payload = {
-        **copy.deepcopy(PAYLOAD_BLACK_LIST),
-        'candidateId': candidate_id
-    }
-    _, data = candidate_api_auth.set_black_list(json=payload)
-    return candidate_id
