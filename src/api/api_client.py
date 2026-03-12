@@ -3,7 +3,6 @@ import time
 from json import JSONDecodeError
 import allure
 import requests
-
 from core.http.retry import RetryConfig, should_retry
 
 
