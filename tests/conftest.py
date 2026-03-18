@@ -1,4 +1,6 @@
 import copy
+import pyodbc
+
 import pytest
 from dotenv import load_dotenv
 import os
@@ -78,11 +80,24 @@ def new_job(vacancy_api_auth):
     yield v['jobId']
     vacancy_api_auth.delete_vacancy(v['jobId'])
 
-
-
 @pytest.fixture
 def new_candidate(candidate_api_auth):
     _, c = candidate_api_auth.create_candidate(json=BASE_PAYLOAD_CANDIDATE)
     yield c['candidateId']
     candidate_api_auth.delete_candidate(c['candidateId'])
 
+@pytest.fixture
+def db_connection():
+    load_dotenv()
+    connection = pyodbc.connect(
+        "Driver={ODBC Driver 18 for SQL Server};"
+        f"Server={os.getenv('DB_SERVER')},{os.getenv('DB_PORT')};"
+        f"Database={os.getenv('DB_NAME')};"
+        f"UID={os.getenv('DB_USER')};"
+        f"PWD={os.getenv('DB_PASSWORD')};"
+        "Encrypt=yes;"
+        "TrustServerCertificate=yes;"
+    )
+    yield connection
+    connection.rollback()
+    connection.close()

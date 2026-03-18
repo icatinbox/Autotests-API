@@ -26,16 +26,18 @@ def permission_full_admin(settings_api_auth):
     settings_api_auth.change_role(json=PAYLOAD_BASE_ROLE)
 
 @pytest.fixture
-def grade(test_api_auth):
-    _, data = test_api_auth.get_grades()
-    random_grade = random.choice(data)
-    return random_grade['gradeId'], random_grade['name']
+def grade(db_connection):
+    cursor = db_connection.cursor()
+    cursor.execute('select Id, Label from lookup.TestAssignmentGrade')
+    grade_id, grade_name = random.choice(cursor.fetchall())
+    return grade_id, grade_name
 
 @pytest.fixture
-def test(test_api_auth):
-    _, data = test_api_auth.get_all_directory_tests()
-    random_test = random.choice(data)
-    return random_test['testId'], random_test['name']
+def test(db_connection):
+    cursor = db_connection.cursor()
+    cursor.execute('select Id, Label from lookup.TestAssignmentDefinitions')
+    test_id, test_name = random.choice(cursor.fetchall())
+    return test_id, test_name
 
 @pytest.fixture
 def new_test_id(test_api_auth, candidate_job_histories, test, request):

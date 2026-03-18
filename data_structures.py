@@ -893,8 +893,8 @@ BASE_PAYLOAD_CANDIDATE = {
     "addWay": "Отклик",
     "sourceName": "Центр занятости",
     "candidateId": None,
-    "firstName": "Тестовый",
-    "middleName": "Кандидат",
+    "firstName": f"Тестовый {datetime.now().month}",
+    "middleName": f"Кандидат {datetime.now().day}",
     "emails": [],
     "aboutMe": None,
     "position": None,
@@ -917,7 +917,7 @@ BASE_PAYLOAD_CANDIDATE = {
 }
 BASE_PAYLOAD_VACANCY = {
     "accountId": 22014,
-    "name": "Тестовая Новая вакансия",
+    "name": f"Тестовая {datetime.now().strftime('YY MM DD')} Новая вакансия",
     "regionId": None,
     "suspensePeriods": [],
     "customerId": 0,
