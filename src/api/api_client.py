@@ -64,7 +64,6 @@ class ClientApi:
         last_exception = None
         last_response = None
 
-        # kwargs.setdefault("timeout", 10)
         for attempt in range(1, config.attempts + 1):
             try:
                 response = self._request_once(path, method, attempt, **kwargs)
@@ -95,7 +94,6 @@ class ClientApi:
         if last_exception:
             raise last_exception
         return last_response
-
 
     def request_json(self, path, method, is_raise=True, **kwargs):
         response = self.request(path, method, **kwargs)

@@ -35,7 +35,7 @@ def grade(db_connection):
 @pytest.fixture
 def test(db_connection):
     cursor = db_connection.cursor()
-    cursor.execute('select Id, Label from lookup.TestAssignmentDefinitions')
+    cursor.execute("select Id, Label from lookup.TestAssignmentDefinitions")
     test_id, test_name = random.choice(cursor.fetchall())
     return test_id, test_name
 
