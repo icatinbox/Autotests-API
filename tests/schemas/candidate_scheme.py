@@ -17,7 +17,7 @@ class CandidateStatusSla(BaseModel):
     id: int
     candidateStatusId: int
     jobId: Optional[int] = None
-    slaTime: int  # миллисекунды
+    slaTime: int
 
 
 class CandidateHistory(BaseModel):
@@ -70,6 +70,11 @@ class CandidateHistory(BaseModel):
 
     hireTermId: Optional[int] = None
     reasonId: Optional[int] = None
+    youthProgramParticipation: Optional[Any] = None
+    isYouthProgramEvent: bool
+    youthProgramId: Optional[int] = None
+    jobType: Optional[int] = None
+    employmentConditionId: Optional[int] = None
 
 
 class ActiveCandidateHistoryItem(BaseModel):
@@ -83,6 +88,9 @@ class ActiveCandidateHistoryItem(BaseModel):
     dateCreated: datetime
     candidateHistoryId: int
     closedAt: int | None = None
+
+    # новое поле из ответа
+    jobType: Optional[int] = None
 
 
 class FeedResponse(BaseModel):

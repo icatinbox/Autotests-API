@@ -1,120 +1,20 @@
 from datetime import datetime
 from tests.utils.utils import date_to_iso
 
-SQL_INSERT_CANDIDATE = """
-    DECLARE @Now DATETIME = GETDATE();
-    DECLARE @NowMs BIGINT = DATEDIFF_BIG(SECOND, '19700101', @Now) * 1000;
-    DECLARE @Suffix NVARCHAR(50) =
-        CONVERT(NVARCHAR(8), @Now, 112) + N'_' +
-        REPLACE(CONVERT(NVARCHAR(8), @Now, 108), ':', '') + N'_' +
-        RIGHT(N'000' + CAST(DATEPART(MILLISECOND, @Now) AS NVARCHAR(3)), 3);
-    INSERT INTO dbo.Candidates (
-        AccountId,
-        ClientId,
-        CandidateStatusId,
-        CVId,
-        Salary,
-        Employment,
-        Schedule,
-        Place,
-        Sex,
-        VKCity,
-        BusinessTrip,
-        BirthDate,
-        DateCreated,
-        LastUpdate,
-        Experience,
-        FirstName,
-        LastName,
-        AddWay,
-        Currency
-    )
-    OUTPUT INSERTED.CandidateId
-    VALUES (
-        0,
-        1000002,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        @NowMs,
-        @NowMs,
-        0,
-        N'Имя_' + @Suffix,
-        N'Фамилия_' + @Suffix,
-        N'Отклик',
-        0
-    );
-"""
-SQL_INSERT_VACANCY = """
-    DECLARE @Now DATETIME = GETDATE();
-    DECLARE @Suffix NVARCHAR(50) =
-        CONVERT(NVARCHAR(8), @Now, 112) + N'_' +
-        REPLACE(CONVERT(NVARCHAR(8), @Now, 108), ':', '') + N'_' +
-        RIGHT(N'000' + CAST(DATEPART(MILLISECOND, @Now) AS NVARCHAR(3)), 3);
-    
-    INSERT INTO dbo.Jobs (
-        Status,
-        AccountId,
-        Name,
-        CustomerId,
-        ResponsibleId,
-        FromDate,
-        PositionCount,
-        IsConfidential,
-        TravelWorkType
-    )
-    OUTPUT INSERTED.JobId
-    VALUES (
-        1,
-        24908,
-        N'Кулеш ' + @Suffix,
-        0,
-        24908,
-        CAST('2026-03-19' AS datetimeoffset),
-        1,
-        0,
-        0
-    );
-"""
-SQL_INSERT_CANDIDATE_HISTORY = """
-    DECLARE @NowMs BIGINT = DATEDIFF_BIG(SECOND, '19700101', GETUTCDATE()) * 1000;
-    DECLARE @FromDateMs BIGINT = DATEDIFF_BIG(SECOND, '19700101', GETUTCDATE()) * 1000;
-    INSERT INTO dbo.CandidateHistories (
-        CandidateStatusId,
-        JobId,
-        CandidateId,
-        DateCreated,
-        EventType,
-        Description,
-        FromDate,
-        AccountId,
-        IsAllDay,
-        ResponsibleId,
-        ReasonId
-    )
-    OUTPUT INSERTED.CandidateHistoryId
-    VALUES (?, ?, ?, @NowMs, 0, N'',
-        @FromDateMs, 24908, 0, 24908, ?);
-    """
-
 DEFAULT_STATUS_ID = 28925
 STATUS_FREE_CANDIDATE = 28939
 STATUS_BLACK_LIST = 28836
+STATUS_ASSIGN_TEST = 28933
+
+ACCOUNT_ID = 24908
 
 PAYLOAD_BLACK_LIST = {
     "candidateId": None,
     "description": "",
-    "accountId": 24908,
+    "accountId": ACCOUNT_ID,
     "statusId": STATUS_BLACK_LIST,
     "isAllDay": 0,
-    "responsibleId": 24908,
+    "responsibleId": ACCOUNT_ID,
     "fields": "",
     "notificationSettings": [],
     "invited": ""
@@ -1020,12 +920,12 @@ BASE_PAYLOAD_CANDIDATE = {
     "lastName": "Кандидатович"
 }
 BASE_PAYLOAD_VACANCY = {
-    "accountId": 24908,
+    "accountId": ACCOUNT_ID,
     "name": f"Тестовая {datetime.now().strftime('YY MM DD')} Новая вакансия",
     "regionId": None,
     "suspensePeriods": [],
     "customerId": 0,
-    "responsibleId": 24908,
+    "responsibleId": ACCOUNT_ID,
     "hiringManagerId": 0,
     "functionalManagerId": 0,
     "status": 1,
@@ -1154,10 +1054,10 @@ BASE_PAYLOAD_CANDIDATE_HISTORIES = {
     "candidateId": None,
     "description": "",
     "jobId": None,
-    "accountId": 24908,
+    "accountId": ACCOUNT_ID,
     "statusId": None,
     "isAllDay": 0,
-    "responsibleId": 24908,
+    "responsibleId": ACCOUNT_ID,
     "fields": "",
     "sodPackagePriority": 5,
     "sodVsp": 0,
@@ -1182,7 +1082,7 @@ BASE_PAYLOAD_TEST = {
 }
 
 PAYLOAD_ROLE_ADMIN = {
-    "accountId": 24908,
+    "accountId": ACCOUNT_ID,
     "department": "",
     "isBlocked": 0,
     "firstName": "сотрудник",
@@ -1196,7 +1096,7 @@ PAYLOAD_ROLE_ADMIN = {
     "delegatedOrganizationUnitIds": []
 }
 PAYLOAD_BASE_ROLE = {
-    "accountId": 24908,
+    "accountId": ACCOUNT_ID,
     "department": "",
     "isBlocked": 0,
     "firstName": "сотрудник",

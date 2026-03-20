@@ -105,10 +105,10 @@ def test_set_free_candidate_with_one_link_is_final(candidate_api_auth, candidate
     (28809, {'statusId': 28913}),
     ({'statusId': 28810, 'ReasonId': 1304}, {'statusId': 28813, 'ReasonId': 1304}),
 ], indirect=['candidate_job_histories'])
-def test_set_free_candidate_with_two_link_not_final(candidate_api_auth, new_job, candidate_job_histories, status):
+def test_set_free_candidate_with_two_link_not_final(candidate_api_auth, new_job_db, candidate_job_histories, status):
     candidate_id, job_id, ch_id = candidate_job_histories
     with allure.step('Запрос, на создание еще одной связки К-В'):
-        payload = generate_payload_candidate_history(candidate_id, new_job, status)
+        payload = generate_payload_candidate_history(candidate_id, new_job_db, status)
         resp_new_ch, data_new_ch = candidate_api_auth.create_candidate_histories(json=payload)
     with allure.step('Проверка, что новая связь создана успешно'):
         assert resp_new_ch.status_code == 201
@@ -121,7 +121,7 @@ def test_set_free_candidate_with_two_link_not_final(candidate_api_auth, new_job,
         valid_feed_before = FeedResponse.model_validate(data_feed_before)
     with allure.step('Проверка, что новая связка К-В не закрыта'):
         assert valid_feed_before.activeCandidateHistories[0].candidateId == candidate_id
-        assert valid_feed_before.activeCandidateHistories[0].jobId == new_job
+        assert valid_feed_before.activeCandidateHistories[0].jobId == new_job_db
         assert valid_feed_before.activeCandidateHistories[0].candidateHistoryId == new_ch_id
         assert valid_feed_before.activeCandidateHistories[0].closedAt is None
     with allure.step('Проверка, что старая связка К-В не закрыта'):
@@ -142,7 +142,7 @@ def test_set_free_candidate_with_two_link_not_final(candidate_api_auth, new_job,
         valid_feed_after = FeedResponse.model_validate(data_feed_after)
     with allure.step('Проверка, что новая связка К-В осталась открыта'):
         assert valid_feed_after.activeCandidateHistories[0].candidateId == candidate_id
-        assert valid_feed_after.activeCandidateHistories[0].jobId == new_job
+        assert valid_feed_after.activeCandidateHistories[0].jobId == new_job_db
         assert valid_feed_after.activeCandidateHistories[0].candidateHistoryId == new_ch_id
         assert valid_feed_after.activeCandidateHistories[0].closedAt is None
     with allure.step('Проверка, что старая связка К-В закрылась'):
@@ -158,10 +158,10 @@ def test_set_free_candidate_with_two_link_not_final(candidate_api_auth, new_job,
 @pytest.mark.parametrize('candidate_job_histories, status',
                          [(28778, {'statusId': 28815})],
                          indirect=['candidate_job_histories'])
-def test_set_free_candidate_with_two_link_is_final(candidate_api_auth, new_job, candidate_job_histories, status):
+def test_set_free_candidate_with_two_link_is_final(candidate_api_auth, new_job_db, candidate_job_histories, status):
     candidate_id, job_id, ch_id = candidate_job_histories
     with allure.step('Запрос, на создание еще одной связки К-В'):
-        payload = generate_payload_candidate_history(candidate_id, new_job, status)
+        payload = generate_payload_candidate_history(candidate_id, new_job_db, status)
         resp_new_ch, data_new_ch = candidate_api_auth.create_candidate_histories(json=payload)
     with allure.step('Проверка, что новая связь создана успешно'):
         assert resp_new_ch.status_code == 201
@@ -174,7 +174,7 @@ def test_set_free_candidate_with_two_link_is_final(candidate_api_auth, new_job, 
         valid_feed_before = FeedResponse.model_validate(data_feed_before)
     with allure.step('Проверка, что новая связка К-В не закрыта'):
         assert valid_feed_before.activeCandidateHistories[0].candidateId == candidate_id
-        assert valid_feed_before.activeCandidateHistories[0].jobId == new_job
+        assert valid_feed_before.activeCandidateHistories[0].jobId == new_job_db
         assert valid_feed_before.activeCandidateHistories[0].candidateHistoryId == new_ch_id
         assert valid_feed_before.activeCandidateHistories[0].closedAt is None
     with allure.step('Проверка, что старая связка К-В не закрыта'):
@@ -184,7 +184,7 @@ def test_set_free_candidate_with_two_link_is_final(candidate_api_auth, new_job, 
         assert valid_feed_before.activeCandidateHistories[1].closedAt is None
 
     with allure.step('Запрос на назначение свободного кандидата по новой вакансии'):
-        payload = generate_payload_free_candidate(new_job, candidate_id)
+        payload = generate_payload_free_candidate(new_job_db, candidate_id)
         resp, data = candidate_api_auth.set_free_candidate(json=payload, is_raise=False)
     with allure.step('Проверка, что свободный кандидат не назначился'):
         assert resp.status_code == 400
@@ -197,7 +197,7 @@ def test_set_free_candidate_with_two_link_is_final(candidate_api_auth, new_job, 
         valid_feed_after = FeedResponse.model_validate(data_feed_after)
     with allure.step('Проверка, что новая связка К-В осталась открыта'):
         assert valid_feed_after.activeCandidateHistories[0].candidateId == candidate_id
-        assert valid_feed_after.activeCandidateHistories[0].jobId == new_job
+        assert valid_feed_after.activeCandidateHistories[0].jobId == new_job_db
         assert valid_feed_after.activeCandidateHistories[0].candidateHistoryId == new_ch_id
         assert valid_feed_after.activeCandidateHistories[0].closedAt is None
     with allure.step('Проверка, что старая связка К-В осталась открытой'):
@@ -272,14 +272,14 @@ def test_set_free_candidate_on_black_list(candidate_api_auth, black_list_candida
     {'statusId': 28814},
     {'statusId': 28810, 'ReasonId': 1304},
     {'statusId': 28807}])
-def test_delete_free_candidate_set_other_status(candidate_api_auth, free_candidate, new_job, status):
+def test_delete_free_candidate_set_other_status(candidate_api_auth, free_candidate, new_job_db, status):
     with allure.step('Проверяем, что Свободный кандидат - последний статус'):
         _, data_feed_before = candidate_api_auth.get_feed(free_candidate)
         valid_feed_before = FeedResponse.model_validate(data_feed_before)
         assert valid_feed_before.candidateHistories[0].statusId == STATUS_FREE_CANDIDATE
 
     with allure.step('Запрос на открытие новой группы статусов'):
-        payload = generate_payload_candidate_history(free_candidate, new_job, status)
+        payload = generate_payload_candidate_history(free_candidate, new_job_db, status)
         response, data = candidate_api_auth.create_candidate_histories(json=payload)
     with allure.step('Проверка, что новая группа успешно создана'):
         assert response.status_code == 201
@@ -290,7 +290,7 @@ def test_delete_free_candidate_set_other_status(candidate_api_auth, free_candida
     with allure.step('Валидация ответа с помощью pydantic'):
         valid_feed_after = FeedResponse.model_validate(data_feed_after)
     with allure.step('Проверка, что новая связка К-В открыта'):
-        assert valid_feed_after.activeCandidateHistories[0].jobId == new_job
+        assert valid_feed_after.activeCandidateHistories[0].jobId == new_job_db
         assert valid_feed_after.activeCandidateHistories[0].candidateHistoryId == new_ch_id
         assert valid_feed_after.activeCandidateHistories[0].candidateStatusId == status['statusId']
     with allure.step('Проверка, что свободный кандидат не последний статус'):

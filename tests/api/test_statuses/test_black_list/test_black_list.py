@@ -69,10 +69,10 @@ def test_set_black_list_with_one_link(candidate_job_histories, candidate_api_aut
     ({'statusId': 28816, 'HireTermId': 1203}, {'statusId':28792}),
     ({'statusId': 28817, 'ReasonId': 1304}, {'statusId': 28816, 'HireTermId': 1203})
 ), indirect=['candidate_job_histories'])
-def test_set_black_list_with_two_link(candidate_job_histories, candidate_api_auth, new_job, status):
+def test_set_black_list_with_two_link(candidate_job_histories, candidate_api_auth, new_job_db, status):
     candidate_id, job_id, ch_id = candidate_job_histories
     with allure.step('Создание еще одной связки К-В'):
-        payload = generate_payload_candidate_history(candidate_id, new_job, status)
+        payload = generate_payload_candidate_history(candidate_id, new_job_db, status)
         resp_new_ch, new_ch = candidate_api_auth.create_candidate_histories(json=payload)
         new_ch_id = new_ch['candidateHistoryId']
     with allure.step('Проверка, успешности создания новой связки К-В'):
@@ -84,7 +84,7 @@ def test_set_black_list_with_two_link(candidate_job_histories, candidate_api_aut
         valid_feed_before = FeedResponse.model_validate(data_feed_before)
     with allure.step('Проверка, что первая связка К-В не закрыта'):
         assert valid_feed_before.activeCandidateHistories[0].closedAt is None
-        assert valid_feed_before.activeCandidateHistories[0].jobId == new_job
+        assert valid_feed_before.activeCandidateHistories[0].jobId == new_job_db
         assert valid_feed_before.activeCandidateHistories[0].candidateHistoryId == new_ch_id
     with allure.step('Проверка, что вторая связка К-В не закрыта'):
         assert valid_feed_before.activeCandidateHistories[1].closedAt is None
@@ -109,7 +109,7 @@ def test_set_black_list_with_two_link(candidate_job_histories, candidate_api_aut
     # у нас в тесте всегда будет только 2 вакансии. Данные проверки более стабильны
     with allure.step('Проверка, что первая связка К-В закрыта'):
         assert valid_feed_after.activeCandidateHistories[0].candidateHistoryId == new_ch_id
-        assert valid_feed_after.activeCandidateHistories[0].jobId == new_job
+        assert valid_feed_after.activeCandidateHistories[0].jobId == new_job_db
         assert isinstance(valid_feed_after.activeCandidateHistories[0].closedAt, int)
     with allure.step('Проверка, что вторая связка К-В закрыта'):
         assert valid_feed_after.activeCandidateHistories[1].candidateHistoryId == ch_id
@@ -149,18 +149,18 @@ def test_set_black_list_on_free_candidate(candidate_api_auth, free_candidate):
         assert all(isinstance(ach.closedAt, int) for ach in valid_feed_after.activeCandidateHistories)
 
 @allure.story('Назначение черного списка у нового кандидата без единой связи')
-def test_black_list_on_new_candidate(candidate_api_auth, new_candidate):
+def test_black_list_on_new_candidate(candidate_api_auth, new_candidate_db):
     with allure.step('Запрос на назначение черного списка'):
-        payload = generate_payload_black_list(new_candidate)
+        payload = generate_payload_black_list(new_candidate_db)
         response, data = candidate_api_auth.set_black_list(json=payload)
     with allure.step('Валидация ответа с помощью pydantic'):
         valid_black_list = CandidateHistory.model_validate(data)
     with allure.step('Проверка успешности назначения черного списка'):
         assert response.status_code == 200
-        assert valid_black_list.candidateId == new_candidate
+        assert valid_black_list.candidateId == new_candidate_db
         assert valid_black_list.statusId == STATUS_BLACK_LIST
     with allure.step('Проверяем, что Черный список - последний статус'):
-        _, data_feed_after= candidate_api_auth.get_feed(new_candidate)
+        _, data_feed_after= candidate_api_auth.get_feed(new_candidate_db)
         valid_feed_after = FeedResponse.model_validate(data_feed_after)
         assert valid_feed_after.candidateHistories[0].statusId == STATUS_BLACK_LIST
     with allure.step('Проверяем, что Черный список не появился в связках К-В'):
@@ -168,11 +168,11 @@ def test_black_list_on_new_candidate(candidate_api_auth, new_candidate):
 
 @allure.story('Снятие черного списка назначением группы статусов')
 @pytest.mark.parametrize('status', [
-    {'statusId': 28913},
-    {'statusId': 28807,'ReasonId': 1304},
+    {'statusId': 28926},
+    {'statusId': 28807,'ReasonId': 1301},
     {'statusId': 28816,'HireTermId': 1203}
 ])
-def test_delete_black_list_set_other_status(candidate_api_auth, black_list_candidate, new_job, status):
+def test_delete_black_list_set_other_status(candidate_api_auth, black_list_candidate, new_job_db, status):
     with allure.step('Запрос, на получение связок К-В до снятия черного списка'):
         _, data_feed_before = candidate_api_auth.get_feed(black_list_candidate)
     with allure.step('Валидация ответа с помощью pydantic'):
@@ -183,7 +183,7 @@ def test_delete_black_list_set_other_status(candidate_api_auth, black_list_candi
         assert valid_feed_before.candidateHistories[0].statusId == STATUS_BLACK_LIST
 
     with allure.step('Запрос, открытие новой группы статусов'):
-        payload = generate_payload_candidate_history(black_list_candidate, new_job, status)
+        payload = generate_payload_candidate_history(black_list_candidate, new_job_db, status)
         resp_new_ch, data_new_ch = candidate_api_auth.create_candidate_histories(json=payload)
     with allure.step('Проверка, что новая группа успешно создана'):
         assert resp_new_ch.status_code == 201
@@ -194,7 +194,7 @@ def test_delete_black_list_set_other_status(candidate_api_auth, black_list_candi
     with allure.step('Валидация ответа с помощью pydantic'):
         valid_feed_after = FeedResponse.model_validate(data_feed_after)
     with allure.step('Проверка, что новая связка К-В открыта'):
-        assert valid_feed_after.activeCandidateHistories[0].jobId == new_job
+        assert valid_feed_after.activeCandidateHistories[0].jobId == new_job_db
         assert valid_feed_after.activeCandidateHistories[0].candidateHistoryId == new_ch_id
         assert valid_feed_after.activeCandidateHistories[0].candidateStatusId == status['statusId']
     with allure.step('Проверка, что черный список не последний статус'):

@@ -20,7 +20,6 @@ def free_candidate(candidate_api_auth, candidate_job_histories):
         **copy.deepcopy(BASE_PAYLOAD_CANDIDATE_HISTORIES),
         'jobId': job_id,
         "candidateId": candidate_id,
-        "accountId": 22014,
         "statusId": STATUS_FREE_CANDIDATE,
     }
     _, data = candidate_api_auth.set_free_candidate(json=payload)
