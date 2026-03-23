@@ -84,7 +84,7 @@ class ClientApi:
 
                 with allure.step(f'retry {attempt} / {type(e).__name__}'):
                     _attach_text("exception", str(e))
-                if not should_retry(config=config, method=method, response=last_response) or attempt == config.attempts:
+                if not should_retry(config=config, method=method, exception=last_exception) or attempt == config.attempts:
                     raise
 
                 with allure.step(f'"Retry after exception. Sleep {delay} sec"'):

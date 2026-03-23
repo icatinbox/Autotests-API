@@ -9,7 +9,6 @@ def sql_delete_by_id(cursor, table, entity_id):
 def sql_clean_full_history_by_job_id(cursor, job_id: int):
     cursor.execute('SELECT TestAssignmentId FROM CandidateTestAssignments WHERE JobId = ?', job_id)
     ids = cursor.fetchall()
-    print("job:", ids)
     for test_id in ids:
         cursor.execute('DELETE FROM Files WHERE ObjectId = ?', f'assignment_{test_id[0]}')
     cursor.execute('DELETE FROM ActiveCandidateStatus WHERE JobId = ?', job_id)
@@ -21,7 +20,6 @@ def sql_clean_full_history_by_job_id(cursor, job_id: int):
 def sql_clean_full_history_by_candidate_id(cursor, candidate_id: int):
     cursor.execute('SELECT TestAssignmentId FROM CandidateTestAssignments WHERE CandidateId = ?', candidate_id)
     ids = cursor.fetchall()
-    print("candi:", ids)
     for test_id in ids:
         cursor.execute('DELETE FROM Files WHERE ObjectId = ?', f'assignment_{test_id[0]}')
     cursor.execute('DELETE FROM ActiveCandidateStatus WHERE CandidateId = ?', candidate_id)

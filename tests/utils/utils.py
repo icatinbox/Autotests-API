@@ -19,6 +19,3 @@ def textb64(text: str) -> str:
 
 def content_to_sql_binary(text: str) -> bytes:
     return text.encode("utf-8")
-
-def content_from_sql_binary(text: bytes) -> str:
-    return text.decode("utf-8")

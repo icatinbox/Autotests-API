@@ -284,12 +284,11 @@ def test_edit_field_assigned_at(test_api_auth, new_test_id_db, candidate_job_his
 
     with allure.step('Подготовка payload для запроса обновления теста'):
         ids_tests = [dict(fileId=f['fileId']) for f in before_data["files"]]
-        print(before_data)
         payload_update_test = generate_payload_test_update(
             test_id = new_test_id_db,
             assignedAt = assigned,
             files = ids_tests,
-            comment = content_from_sql_binary(before_data["comment"])
+            comment = before_data["comment"]
         )
 
     with allure.step('Отправка запроса на обновление теста'):
