@@ -1,5 +1,8 @@
+import base64
 import random
 from datetime import datetime, timedelta
+
+
 
 def random_datetime_between(start: datetime, end: datetime) -> str:
     if end < start:
@@ -10,3 +13,9 @@ def random_datetime_between(start: datetime, end: datetime) -> str:
 
 def date_to_iso(date: datetime) -> str:
     return date.isoformat(timespec="seconds")
+
+def textb64(text: str) -> str:
+    return base64.b64encode(text.encode()).decode()
+
+def content_to_sql_binary(text: str) -> bytes:
+    return text.encode("utf-8")

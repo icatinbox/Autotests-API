@@ -1,35 +1,33 @@
 import copy
-import random
+import pyodbc
 
 import pytest
-
-from data import PAYLOAD_TEST_GRADE, PAYLOAD_TEST_MANAGE, PAYLOAD_FULL_PERMISSIONS, BASE_PAYLOAD_CANDIDATE, \
-    BASE_PAYLOAD_VACANCY, BASE_PAYLOAD_CANDIDATE_HISTORIES, DEFAULT_STATUS_ID, BASE_PAYLOAD_TEST, PAYLOAD_ROLE_ADMIN, \
-    PAYLOAD_BASE_ROLE, STATUS_FREE_CANDIDATE, PAYLOAD_BLACK_LIST, LOGIN, PASSWORD, BASEURL
+from dotenv import load_dotenv
+import os
+from data_structures import (BASE_PAYLOAD_CANDIDATE, BASE_PAYLOAD_VACANCY, BASE_PAYLOAD_CANDIDATE_HISTORIES,
+                             DEFAULT_STATUS_ID)
+from src.sql.sql_delete import sql_delete_by_id, sql_clean_full_history_by_job_id, sql_clean_full_history_by_candidate_id
+from src.sql.sql_insert import (SQL_INSERT_CANDIDATE, sql_insert_candidate_history,
+                                sql_insert_active_candidate_status, sql_insert_vacancy)
 from src.api.api_candidate import CandidateApi
 from src.api.api_client import ClientApi
 from src.api.api_settings import SettingsApi
 from src.api.api_tests import TestApi
 from src.api.api_vacancy import VacancyApi
 
-def pytest_addoption(parser):
-    parser.addoption(
-        "--url",
-        action = "store",
-        default = BASEURL,
-        help = "base url"
-    )
-
 @pytest.fixture
 def api_client(request):
-    base_url = request.config.getoption("--url")
+    load_dotenv()
+    base_url = os.getenv("API_BASE_URL")
     return ClientApi(base_url, verify=False)
 
 @pytest.fixture
 def auth_api_client(api_client):
+    login = os.getenv("LOGIN")
+    password = os.getenv("PASSWORD")
     payload = {
-        "username": LOGIN,
-        "password": PASSWORD
+        "username": login,
+        "password": password
     }
     api_client.request_auth(payload=payload)
     return api_client
@@ -50,20 +48,50 @@ def candidate_api_auth(auth_api_client):
 def vacancy_api_auth(auth_api_client):
     return VacancyApi(auth_api_client)
 
+# Создание новой свзяки(candidate history) через БД
 @pytest.fixture
-def remove_permission_test_manage(settings_api_auth):
-    settings_api_auth.change_permission(json=PAYLOAD_TEST_MANAGE)
-    yield settings_api_auth
-    settings_api_auth.change_permission(json=PAYLOAD_FULL_PERMISSIONS)
+def candidate_job_histories_db(db_connection, request):
+    param = getattr(request, "param", DEFAULT_STATUS_ID)
+    overrides = {"statusId": param} if isinstance(param, int) else dict(param)
 
-@pytest.fixture
-def remove_permission_test_grade(settings_api_auth):
-    settings_api_auth.change_permission(json=PAYLOAD_TEST_GRADE)
-    yield settings_api_auth
-    settings_api_auth.change_permission(json=PAYLOAD_FULL_PERMISSIONS)
+    # Создание нового кандидата
+    cursor = db_connection.cursor()
+    cursor.execute(SQL_INSERT_CANDIDATE)
+    candidate_id = cursor.fetchone()[0]
 
+    # Создание новой вакансии
+    job_id = sql_insert_vacancy(cursor)
+
+    # Открытие группы статусов для созданных кандидата и вакансии
+    ch_id = sql_insert_candidate_history(
+        cursor,
+        overrides['statusId'],
+        job_id,
+        candidate_id,
+        overrides.get('reasonId', None)
+    )
+    acs_id = sql_insert_active_candidate_status(
+        cursor,
+        overrides['statusId'],
+        job_id,
+        candidate_id,
+        ch_id
+    )
+    # Сохранение данных в БД
+    db_connection.commit()
+
+    yield candidate_id, job_id, ch_id
+
+    # Удаляем созданные сущности из БД
+    sql_delete_by_id(cursor, 'ActiveCandidateStatus', acs_id)
+    sql_delete_by_id(cursor, 'CandidateHistories', ch_id)
+    sql_delete_by_id(cursor, 'Candidates', candidate_id)
+    sql_delete_by_id(cursor, 'Jobs', job_id)
+    db_connection.commit()
+
+# Создание новой свзяки(candidate history) через API
 @pytest.fixture
-def candidate_job_histories(candidate_api_auth, vacancy_api_auth, request):
+def candidate_job_histories(candidate_api_auth, vacancy_api_auth, db_connection, request):
     param = getattr(request, "param", DEFAULT_STATUS_ID)
     overrides = {"statusId": param} if isinstance(param, int) else dict(param)
 
@@ -75,7 +103,7 @@ def candidate_job_histories(candidate_api_auth, vacancy_api_auth, request):
     _, v = vacancy_api_auth.create_vacancy(BASE_PAYLOAD_VACANCY)
     job_id = v['jobId']
 
-    # Открытие для созданных кандидата и вакансии группы
+    # Открытие группы статусов для созданных кандидата и вакансии
     # В payload необходимо передать созданные: candidateId, jobId, statusId(overrides)
     payload ={
         **copy.deepcopy(BASE_PAYLOAD_CANDIDATE_HISTORIES),
@@ -84,70 +112,42 @@ def candidate_job_histories(candidate_api_auth, vacancy_api_auth, request):
         **overrides
     }
     _, ch = candidate_api_auth.create_candidate_histories(json=payload)
-    candidate_history_id = ch['candidateHistoryId']
-    yield candidate_id, job_id, candidate_history_id
+    ch_id = ch['candidateHistoryId']
+    yield candidate_id, job_id, ch_id
+    cursor = db_connection.cursor()
+    sql_clean_full_history_by_job_id(cursor, job_id)
+    sql_clean_full_history_by_candidate_id(cursor, candidate_id)
+    db_connection.commit()
 
-    # удаляем созданные сущности
-    candidate_api_auth.delete_candidate(candidate_id)
-    vacancy_api_auth.delete_vacancy(job_id)
-
+# Создание новой вакансии через БД
 @pytest.fixture
-def test(test_api_auth):
-    _, data = test_api_auth.get_all_directory_tests()
-    random_test = random.choice(data)
-    return random_test['testId'], random_test['name']
+def new_job_db(db_connection):
+    cursor = db_connection.cursor()
+    job_id = sql_insert_vacancy(cursor)
+    db_connection.commit()
+    yield job_id
+    sql_clean_full_history_by_job_id(cursor, job_id)
+    db_connection.commit()
 
-@pytest.fixture
-def new_test_id(test_api_auth, candidate_job_histories, test, request):
-    is_delete = getattr(request, "param", True)
-    candidate_id, job_id, candidate_history_id = candidate_job_histories
-    test_id, _ = test
-    payload ={
-        **copy.deepcopy(BASE_PAYLOAD_TEST),
-        "jobId": job_id,
-        "candidateId": candidate_id,
-        "testHistoryId": candidate_history_id,
-        "testId": test_id
-    }
-    _, data = test_api_auth.attach_test(json=payload)
-    new_test_id = data['testAssignmentId']
-    yield new_test_id
-
-    # Удаляем созданный тест, если is_delete = True(т.к. тест можно удалить не всегда)
-    if is_delete:
-        test_api_auth.delete_test(new_test_id)
-
-@pytest.fixture
-def grade(test_api_auth):
-    _, data = test_api_auth.get_grades()
-    random_grade = random.choice(data)
-    return random_grade['gradeId'], random_grade['name']
-
-@pytest.fixture
-def permission_full_admin(settings_api_auth):
-    settings_api_auth.change_role(json=PAYLOAD_ROLE_ADMIN)
-    yield settings_api_auth
-    settings_api_auth.change_role(json=PAYLOAD_BASE_ROLE)
-
+# Создание новой вакансии через API
 @pytest.fixture
 def new_job(vacancy_api_auth):
     _, v = vacancy_api_auth.create_vacancy(BASE_PAYLOAD_VACANCY)
     yield v['jobId']
     vacancy_api_auth.delete_vacancy(v['jobId'])
 
+# Создание нового кандидата через БД
 @pytest.fixture
-def free_candidate(candidate_api_auth, candidate_job_histories):
-    candidate_id, job_id, candidate_history_id = candidate_job_histories
-    payload = {
-        **copy.deepcopy(BASE_PAYLOAD_CANDIDATE_HISTORIES),
-        'jobId': job_id,
-        "candidateId": candidate_id,
-        "accountId": 22014,
-        "statusId": STATUS_FREE_CANDIDATE,
-    }
-    _, data = candidate_api_auth.set_free_candidate(json=payload)
-    return candidate_id
+def new_candidate_db(db_connection):
+    cursor = db_connection.cursor()
+    cursor.execute(SQL_INSERT_CANDIDATE)
+    candidate_id = cursor.fetchone()[0]
+    db_connection.commit()
+    yield candidate_id
+    sql_clean_full_history_by_candidate_id(cursor, candidate_id)
+    db_connection.commit()
 
+# Создание нового кандидата через API
 @pytest.fixture
 def new_candidate(candidate_api_auth):
     _, c = candidate_api_auth.create_candidate(json=BASE_PAYLOAD_CANDIDATE)
@@ -155,11 +155,17 @@ def new_candidate(candidate_api_auth):
     candidate_api_auth.delete_candidate(c['candidateId'])
 
 @pytest.fixture
-def black_list_candidate(candidate_api_auth, candidate_job_histories):
-    candidate_id, job_id, candidate_history_id = candidate_job_histories
-    payload = {
-        **copy.deepcopy(PAYLOAD_BLACK_LIST),
-        'candidateId': candidate_id
-    }
-    _, data = candidate_api_auth.set_black_list(json=payload)
-    return candidate_id
+def db_connection():
+    load_dotenv()
+    connection = pyodbc.connect(
+        "Driver={ODBC Driver 18 for SQL Server};"
+        f"Server={os.getenv('DB_SERVER')},{os.getenv('DB_PORT')};"
+        f"Database={os.getenv('DB_NAME')};"
+        f"UID={os.getenv('DB_USER')};"
+        f"PWD={os.getenv('DB_PASSWORD')};"
+        "Encrypt=yes;"
+        "TrustServerCertificate=yes;"
+    )
+    yield connection
+    connection.commit()
+    connection.close()
